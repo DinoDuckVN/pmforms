@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace dktapps\pmforms;
 
+use DinoVNOwO\Base\Initial;
+use DinoVNOwO\Base\session\Session;
 use pocketmine\form\FormValidationException;
 use pocketmine\Player;
 use pocketmine\utils\Utils;
@@ -52,29 +54,34 @@ class MenuForm extends BaseForm{
 	public function __construct(string $title, string $text, array $options, \Closure $onSubmit, ?\Closure $onClose = null){
 		parent::__construct($title);
 		$this->content = $text;
-		$this->options = array_values($options);
-		Utils::validateCallableSignature(function(Player $player, int $selectedOption) : void{}, $onSubmit);
+		$this->options = $options;
+		Utils::validateCallableSignature(function(Session $session, int $selectedOption) : void{}, $onSubmit);
 		$this->onSubmit = $onSubmit;
 		if($onClose !== null){
-			Utils::validateCallableSignature(function(Player $player) : void{}, $onClose);
+			Utils::validateCallableSignature(function(Session $session) : void{}, $onClose);
 			$this->onClose = $onClose;
 		}
 	}
 
-	public function getOption(int $position) : ?MenuOption{
-		return $this->options[$position] ?? null;
+	public function getOption(string $id) : ?MenuOption{
+	    return $this->options[$id] ?? null;
+    }
+
+	public function getOptionByPosition(int $id) : ?MenuOption{
+		return array_values($this->options)[$id] ?? null;
 	}
 
 	final public function handleResponse(Player $player, $data) : void{
+	    $session = Initial::getSessionManager()->getSession($player);
 		if($data === null){
 			if($this->onClose !== null){
-				($this->onClose)($player);
+				($this->onClose)($session);
 			}
 		}elseif(is_int($data)){
-			if(!isset($this->options[$data])){
+			if(!isset(array_values($this->options)[$data])){
 				throw new FormValidationException("Option $data does not exist");
 			}
-			($this->onSubmit)($player, $data);
+			($this->onSubmit)($session, $data);
 		}else{
 			throw new FormValidationException("Expected int or null, got " . gettype($data));
 		}
